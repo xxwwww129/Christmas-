@@ -1,0 +1,181 @@
+# Christmas-
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>程序员的圣诞浪漫</title>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+    <!-- 修正OrbitControls路径 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        .info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">Merry Christmas</div>
+    <script>
+        // 初始化场景、相机、渲染器
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // 轨道控制器 - 确保Three.OrbitControls可用
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // 生成粒子圣诞树
+        const particleCount = 8000;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+
+        // 圣诞树形状参数
+        const treeHeight = 3;
+        const baseRadius = 3;
+        const topRadius = 0.5;
+
+        // 生成圣诞树粒子
+        for (let i = 0; i < particleCount; i++) {
+            const t = Math.random();
+            const height = t * treeHeight;
+            const radius = baseRadius - (baseRadius - topRadius) * (height / treeHeight);
+            const angle = Math.random() * Math.PI * 2;
+
+            // 使用更均匀的分布
+            const randomFactor = Math.pow(Math.random(), 0.5); // 使分布更均匀
+            positions[i * 3] = Math.cos(angle) * radius * randomFactor;
+            positions[i * 3 + 1] = height - treeHeight / 2;
+            positions[i * 3 + 2] = Math.sin(angle) * radius * randomFactor;
+
+            // 颜色渐变，顶部偏粉，底部偏白
+            const colorFactor = (height / treeHeight) * 0.7 + 0.3;
+            colors[i * 3] = 1; // R
+            colors[i * 3 + 1] = colorFactor; // G
+            colors[i * 3 + 2] = colorFactor; // B
+        }
+
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        const material = new THREE.PointsMaterial({
+            size: 0.05,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.8,
+            blending: THREE.AdditiveBlending // 添加混合模式使效果更好
+        });
+
+        const tree = new THREE.Points(geometry, material);
+        scene.add(tree);
+
+        // 星星背景 - 修正透明度问题
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = 2000;
+        const starPositions = new Float32Array(starCount * 3);
+        const starSizes = new Float32Array(starCount);
+        
+        for (let i = 0; i < starCount; i++) {
+            starPositions[i * 3] = (Math.random() - 0.5) * 100;
+            starPositions[i * 3 + 1] = (Math.random() - 0.5) * 100;
+            starPositions[i * 3 + 2] = (Math.random() - 0.5) * 100 - 20; // 放在树后面
+            starSizes[i] = Math.random() * 0.2 + 0.1; // 星星大小随机
+        }
+        
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starGeometry.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+        
+        const starMaterial = new THREE.PointsMaterial({
+            size: 0.1,
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8,
+            vertexColors: false,
+            sizeAttenuation: true
+        });
+        
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+
+        // 圣诞树顶部装饰
+        const topGeometry = new THREE.SphereGeometry(0.15, 16, 16);
+        const topMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xff3399,
+            emissive: 0xff3399,
+            emissiveIntensity: 0.5
+        });
+        const top = new THREE.Mesh(topGeometry, topMaterial);
+        top.position.y = treeHeight / 2;
+        scene.add(top);
+
+        // 地面圆环
+        const ringGeometry = new THREE.RingGeometry(2, 3, 64);
+        const ringMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.2
+        });
+        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = -treeHeight / 2;
+        scene.add(ring);
+
+        // 添加环境光
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        scene.add(ambientLight);
+
+        // 添加点光源
+        const pointLight = new THREE.PointLight(0xff3399, 1, 10);
+        pointLight.position.set(2, 2, 2);
+        scene.add(pointLight);
+
+        // 动画循环
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // 旋转动画
+            time += 0.01;
+            tree.rotation.y = time * 0.1;
+            top.rotation.y = time * 0.2;
+            
+            // 星星闪烁效果
+            const positions = starGeometry.attributes.position.array;
+            for (let i = 0; i < starCount; i++) {
+                const index = i * 3;
+                positions[index + 1] += Math.sin(time + i) * 0.01;
+            }
+            starGeometry.attributes.position.needsUpdate = true;
+            
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // 窗口大小变化时调整
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
